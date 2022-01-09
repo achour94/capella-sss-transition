@@ -79,7 +79,7 @@ public class FunctionalChainInvolvementRule
     if (result.isOK()) {
       if (!(helper.isValidElement(element, context_p) == Boolean.TRUE)) {
         result = new Status(IStatus.WARNING, Messages.Activity_Transformation,
-            NLS.bind("Functional Chain Involvement ''{0}'' is not valid.", LogHelper.getInstance().getText(element_p)));
+            NLS.bind("Functional Chain Involvement ''{0}'' is not valid A.", LogHelper.getInstance().getText(element_p)));
       }
 
     } else if (helper.isValidElement(element, context_p) == Boolean.TRUE) {
@@ -112,7 +112,7 @@ public class FunctionalChainInvolvementRule
 
       if (!res) {
         result = new Status(IStatus.WARNING, Messages.Activity_Transformation,
-            NLS.bind("Functional Chain Involvement ''{0}'' is not valid.", LogHelper.getInstance().getText(element_p)));
+            NLS.bind("Functional Chain Involvement ''{0}'' is not valid B.", LogHelper.getInstance().getText(element_p)));
       }
     }
 
@@ -163,6 +163,7 @@ public class FunctionalChainInvolvementRule
             if (fSrc instanceof FunctionalChainInvolvementFunction
                 && nextSrcValid instanceof FunctionalChainInvolvementLink)
               ((FunctionalChainInvolvementLink) nextTrgValid).setSource((FunctionalChainInvolvementFunction) fTrg);
+            
             else if (fSrc instanceof FunctionalChainInvolvementLink
                 && nextSrcValid instanceof FunctionalChainInvolvementFunction)
               ((FunctionalChainInvolvementLink) fTrg).setTarget((FunctionalChainInvolvementFunction) nextTrgValid);
@@ -255,21 +256,9 @@ public class FunctionalChainInvolvementRule
   }
 
   private Collection<FunctionalChainInvolvement> listInvolvments(FunctionalChainInvolvement startFci,
-      FunctionalChainInvolvement endFci) {
-    Collection<FunctionalChainInvolvement> res = new ArrayList<>();
-    FunctionalChainInvolvement current = startFci;
-
-    while (!current.getNextFunctionalChainInvolvements().isEmpty()) {
-      FunctionalChainInvolvement next = current.getNextFunctionalChainInvolvements().get(0);
-      if (next.equals(endFci) == false) {
-        current = next;
-        res.add(current);
-      } else {
-        break;
-      }
-    }
-
-    return res;
+      FunctionalChainInvolvement endFci, IContext context) {
+    FunctionalChainAttachmentHelper helper = FunctionalChainAttachmentHelper.getInstance(context);
+    return helper.getNextValidInternal(startFci, endFci, context, null).iterator().next();
   }
 
   /**
@@ -310,7 +299,7 @@ public class FunctionalChainInvolvementRule
 
     // Creation of a description containing all cut involvements
     Collection<FunctionalChainInvolvement> involvments = listInvolvments((FunctionalChainInvolvementFunction) startFci,
-        (FunctionalChainInvolvementFunction) endFci);
+        (FunctionalChainInvolvementFunction) endFci, context);
     String description = buildDescription(involvments);
 
     AbstractFunction tSrtFct = (AbstractFunction) tracedOf(startFci.getInvolved(), context);
@@ -404,29 +393,9 @@ public class FunctionalChainInvolvementRule
   @Override
   protected void premicesRelated(EObject element_p, ArrayList<IPremise> needed_p) {
     super.premicesRelated(element_p, needed_p);
-
-    if (element_p instanceof FunctionalChainInvolvement) {
-      FunctionalChainInvolvement src = (FunctionalChainInvolvement) element_p;
-
-      Collection<EObject> nexts = new ArrayList<EObject>();
-
-      while ((src.getNextFunctionalChainInvolvements() != null)
-          && (src.getNextFunctionalChainInvolvements().isEmpty() == false)) {
-        src = src.getNextFunctionalChainInvolvements().get(0);
-        nexts.add(src);
-
-      }
-      needed_p.addAll(createDefaultPrecedencePremices(nexts, "nextsInvolvements"));
-    }
-
     if (element_p instanceof FunctionalChainReference) {
-      Collection<EObject> fcis = new ArrayList<EObject>();
-      FunctionalChain fc = ((FunctionalChainReference) element_p).getReferencedFunctionalChain();
-      fcis.addAll(fc.getOwnedFunctionalChainInvolvements());
-
-      needed_p.addAll(createDefaultCriticalPremices(fcis, "referencedInvolvements"));
+    	needed_p.addAll(createDefaultPrecedencePremices(element_p, FaPackage.Literals.FUNCTIONAL_CHAIN_REFERENCE__REFERENCED_FUNCTIONAL_CHAIN));
     }
-
   }
 
   private <T extends EObject> T tracedOf(T e, IContext context) {
@@ -488,6 +457,12 @@ public class FunctionalChainInvolvementRule
     return res;
   }
 
+
+  @Override
+  protected boolean isOrderedContainment(EObject element) {
+    return false;
+  }
+  
   private boolean sameHierarchy(Collection<EObject> tsH, Collection<EObject> ttH) {
     Iterator<EObject> source = tsH.iterator();
     Iterator<EObject> target = ttH.iterator();

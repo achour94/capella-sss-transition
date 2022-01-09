@@ -12,6 +12,7 @@
  *******************************************************************************/
 package org.polarsys.capella.transition.system2subsystem.rules.fa;
 
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
@@ -36,7 +37,9 @@ import org.polarsys.capella.core.transition.common.handlers.contextscope.Context
 import org.polarsys.capella.core.transition.common.handlers.contextscope.IContextScopeHandler;
 import org.polarsys.capella.core.transition.common.handlers.log.LogHelper;
 import org.polarsys.capella.transition.system2subsystem.handlers.attachment.FunctionalChainAttachmentHelper;
+import org.polarsys.kitalpha.transposer.rules.handler.business.premises.PrecedencePremise;
 import org.polarsys.kitalpha.transposer.rules.handler.rules.api.IContext;
+import org.polarsys.kitalpha.transposer.rules.handler.rules.api.IPremise;
 
 
 public class FunctionalChainRule extends org.polarsys.capella.core.transition.system.rules.fa.FunctionalChainRule {
@@ -58,13 +61,16 @@ public class FunctionalChainRule extends org.polarsys.capella.core.transition.sy
   }
 
   @Override
+  protected void premicesRelated(EObject element, ArrayList<IPremise> needed) {
+    super.premicesRelated(element, needed);
+  } 
+  
+  @Override
   public void apply(EObject element_p, IContext context_p) throws Exception {
     // Perform a computation of valid involvement
     if (applyRequired(element_p, context_p).isOK()) {
       FunctionalChain element = (FunctionalChain) element_p;
-      if (FunctionalChainExt.isFunctionalChainValid(element)) {
-        FunctionalChainAttachmentHelper.getInstance(context_p).computeChain(element, context_p);
-      }
+      FunctionalChainAttachmentHelper.getInstance(context_p).computeChains(element, context_p);
     }
 
     super.apply(element_p, context_p);
