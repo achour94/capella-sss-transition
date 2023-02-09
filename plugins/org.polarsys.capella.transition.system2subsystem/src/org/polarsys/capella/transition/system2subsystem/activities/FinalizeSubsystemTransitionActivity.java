@@ -14,6 +14,8 @@ package org.polarsys.capella.transition.system2subsystem.activities;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import org.eclipse.core.resources.IProject;
 import org.eclipse.core.runtime.CoreException;
@@ -21,9 +23,11 @@ import org.eclipse.core.runtime.IStatus;
 import org.eclipse.core.runtime.NullProgressMonitor;
 import org.eclipse.core.runtime.Platform;
 import org.eclipse.core.runtime.Status;
+import org.eclipse.emf.common.util.EList;
 import org.eclipse.emf.ecore.EObject;
 import org.eclipse.emf.ecore.resource.Resource;
 import org.eclipse.emf.transaction.TransactionalEditingDomain;
+import org.polarsys.capella.common.helpers.EObjectExt;
 import org.polarsys.capella.core.model.handler.helpers.HoldingResourceHelper;
 import org.polarsys.capella.core.transition.common.activities.AbstractActivity;
 import org.polarsys.capella.core.transition.common.constants.ITransitionConstants;
@@ -75,6 +79,20 @@ public class FinalizeSubsystemTransitionActivity extends AbstractActivity {
       Resource transformationResource = transformationRoot.eResource();
       Resource targetResource = (Resource) context.get(ITransitionConstants.TRANSITION_TARGET_RESOURCE);
 
+      List<Resource> filteredResources = targetResource.getResourceSet().getResources().stream()
+    		    .filter(r -> r.getURI().toString().endsWith(".capellafragment") 
+    		    		&& r.getURI().toString().startsWith(targetResource.getURI().trimSegments(1).toString()))
+    		    .collect(Collectors.toList());
+      for (Resource resource : filteredResources) {
+    	  try {
+			resource.save(Collections.emptyMap());
+    	  } catch (IOException exception_p) {
+              LogHelper.getInstance().log(exception_p.getMessage(), new Status(IStatus.ERROR, org.polarsys.capella.transition.system2subsystem.Activator.PLUGIN_ID, exception_p.getMessage(), exception_p), Messages.Activity_Transformation);
+           }
+    	  resource.unload();
+    	  targetResource.getResourceSet().getResources().remove(resource);
+      }
+      
       // unless we transform directly into the target resource
       // inter and crossphase transform into a resourceless model, so that in these cases the transformationResource is null
       if ((transformationResource != null) && (transformationResource != targetResource)) {
